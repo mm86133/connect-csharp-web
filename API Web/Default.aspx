@@ -102,7 +102,7 @@
                 <asp:Button ID="btnMakeWithdrawal" runat="server" Text="Make Withdrawal from Account" OnClick="btnMakeWithdrawal_Click" />
             </ContentTemplate>
         </ajaxToolkit:TabPanel>
-        <ajaxToolkit:TabPanel runat="server" HeaderText="Trading" ID="tpTrading">
+        <ajaxToolkit:TabPanel runat="server" HeaderText="Trading" ID="tpTrading" >
             <ContentTemplate>
                 <asp:Button ID="btnSendPingRequest" runat="server" Text="Send Ping Request" OnClick="btnSendPingRequest_Click" />
                 <br />

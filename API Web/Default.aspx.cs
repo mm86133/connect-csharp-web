@@ -18,9 +18,10 @@ namespace Accounts_API_Web
         private string _clientSecret = "ET2ee1B4JGme1XH4AQUNOInMvfTU3URF4CKCOHOx3SfcNXoojS";
         private string _connectUrl = "https://sandbox-connect.spotware.com/";
         private string _apiUrl = "https://sandbox-api.spotware.com/";
-        private static string _apiHost = "sandbox-tradeapi.spotware.com";
-        private static int _apiPort = 5032;
-
+        private string _apiHost = "sandbox-tradeapi.spotware.com";
+        private int _apiPort = 5032;
+        private TcpClient _tcpClient = new TcpClient();
+        private SslStream _apiSocket;
         protected void Page_Load(object sender, EventArgs e)
         {
             if (Session["Token"] == null)
@@ -47,6 +48,10 @@ namespace Accounts_API_Web
                     Response.Redirect(_connectUrl + "apps/auth?&client_id=" + _clientId + "&redirect_uri=" + HttpContext.Current.Request.Url.AbsoluteUri + "&scope=trading");
                 }
             }
+            
+                _tcpClient = new TcpClient(_apiHost, _apiPort); ;
+                _apiSocket = new SslStream(_tcpClient.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
+                _apiSocket.AuthenticateAsClient(_apiHost);         
         }
 
         protected void btnTradingAccountDetails_Click(object sender, EventArgs e)
@@ -141,7 +146,7 @@ namespace Accounts_API_Web
             var result = Transactions.Withdraw(_apiUrl, token, accountID, txtWithdrawalAmount.Text);
         }
 
-        private static byte[] Listen(SslStream apiSocket)
+        private byte[] Listen(SslStream apiSocket)
         {
             byte[] _length = new byte[sizeof(int)];
             bool cont = true;
@@ -151,7 +156,7 @@ namespace Accounts_API_Web
                 int readBytes = 0;
                 do
                 {
-                    readBytes += apiSocket.Read(_length, readBytes, _length.Length - readBytes);
+                    readBytes += _apiSocket.Read(_length, readBytes, _length.Length - readBytes);
                 } while (readBytes < _length.Length);
 
                 int msgLength = BitConverter.ToInt32(_length.Reverse().ToArray(), 0);
@@ -163,24 +168,20 @@ namespace Accounts_API_Web
                 readBytes = 0;
                 do
                 {
-                    readBytes += apiSocket.Read(_message, readBytes, _message.Length - readBytes);
+                    readBytes += _apiSocket.Read(_message, readBytes, _message.Length - readBytes);
                 } while (readBytes < msgLength);
             }
 
             return _message;
         }
 
-        private SslStream Transmit(OpenApiLib.ProtoMessage msg)
-        {
-            TcpClient client = new TcpClient(_apiHost, _apiPort);
-            var apiSocket = new SslStream(client.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
-            apiSocket.AuthenticateAsClient(_apiHost);
+        private void Transmit(OpenApiLib.ProtoMessage msg)
+        {          
 
             var msgByteArray = msg.ToByteArray();
             byte[] length = BitConverter.GetBytes(msgByteArray.Length).Reverse().ToArray();
-            apiSocket.Write(length);
-            apiSocket.Write(msgByteArray);
-            return apiSocket;
+            _apiSocket.Write(length);
+            _apiSocket.Write(msgByteArray);
         }
 
         private bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
@@ -195,148 +196,164 @@ namespace Accounts_API_Web
         {
             var msgFactory = new OpenApiMessagesFactory();
             var msg = msgFactory.CreatePingRequest((ulong)DateTime.Now.Ticks);
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
 
         protected void btnSendAuthorizationRequest_Click(object sender, EventArgs e)
         {
-            var accountID = ddlTradingAccounts.SelectedValue;
+            SendAuthorizationRequest();
+        }
+
+        private void SendAuthorizationRequest()
+        {
             var msgFactory = new OpenApiMessagesFactory();
             var msg = msgFactory.CreateAuthorizationRequest(_clientId, _clientSecret);
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
 
         protected void btnSubscribeForTradingEvents_Click(object sender, EventArgs e)
         {
+            SendAuthorizationRequest();
             var accountID = ddlTradingAccounts.SelectedValue;
             var token = Session["Token"].ToString();
             var msgFactory = new OpenApiMessagesFactory();
-            var msg = msgFactory.CreateSubscribeForTradingEventsRequest(Convert.ToInt32(accountID), token);
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            var msg = msgFactory.CreateSubscribeForTradingEventsRequest(89214, token);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
-        }
+        }        
 
         protected void btnUnsubscribeForTradingEvents_Click(object sender, EventArgs e)
         {
+            SendAuthorizationRequest();
             var accountID = ddlTradingAccounts.SelectedValue;
             var msgFactory = new OpenApiMessagesFactory();
             var msg = msgFactory.CreateUnsubscribeForTradingEventsRequest(Convert.ToInt32(accountID));
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
 
         protected void btnSendGetAllSubscriptionsForTradingEventsRequest_Click(object sender, EventArgs e)
         {
+            SendAuthorizationRequest();
             var msgFactory = new OpenApiMessagesFactory();
             var msg = msgFactory.CreateAllSubscriptionsForTradingEventsRequest();
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
 
         protected void btnSendGetAllSubscriptionsForSpotEventsRequest_Click(object sender, EventArgs e)
         {
+            SendAuthorizationRequest();
             var msgFactory = new OpenApiMessagesFactory();
             var msg = msgFactory.CreateGetAllSpotSubscriptionsRequest();
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
 
         protected void btnSendMarketOrderRequest_Click(object sender, EventArgs e)
         {
+            SendAuthorizationRequest();
             var accountID = ddlTradingAccounts.SelectedValue;
             var token = Session["Token"].ToString();
             var msgFactory = new OpenApiMessagesFactory();
-            var msg = msgFactory.CreateMarketOrderRequest(Convert.ToInt32(accountID), token, "EURUSD", OpenApiLib.ProtoTradeSide.BUY, 10000);
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            var msg = msgFactory.CreateMarketOrderRequest(Convert.ToInt32(accountID), token, "EURUSD", OpenApiLib.ProtoTradeSide.BUY, 100000);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
 
         protected void btnSendMarketRangeOrderRequest_Click(object sender, EventArgs e)
         {
+            SendAuthorizationRequest();
             var accountID = ddlTradingAccounts.SelectedValue;
             var token = Session["Token"].ToString();
             var msgFactory = new OpenApiMessagesFactory();
-            var msg = msgFactory.CreateMarketRangeOrderRequest(Convert.ToInt32(accountID), token, "EURUSD", OpenApiLib.ProtoTradeSide.BUY, 10000, 1.09, 10);
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            var msg = msgFactory.CreateMarketRangeOrderRequest(Convert.ToInt32(accountID), token, "EURUSD", OpenApiLib.ProtoTradeSide.BUY, 100000, 1.09, 10);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
 
         protected void btnSendLimitOrderRequest_Click(object sender, EventArgs e)
         {
+            SendAuthorizationRequest();
             var accountID = ddlTradingAccounts.SelectedValue;
             var token = Session["Token"].ToString();
             var msgFactory = new OpenApiMessagesFactory();
-            var msg = msgFactory.CreateLimitOrderRequest(Convert.ToInt32(accountID), token, "EURUSD", OpenApiLib.ProtoTradeSide.BUY, 10000, 1.09);
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            var msg = msgFactory.CreateLimitOrderRequest(Convert.ToInt32(accountID), token, "EURUSD", OpenApiLib.ProtoTradeSide.BUY, 100000, 1.09);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
 
         protected void btnSendAmendLimitOrderRequest_Click(object sender, EventArgs e)
         {
+            SendAuthorizationRequest();
             var accountID = ddlTradingAccounts.SelectedValue;
             var token = Session["Token"].ToString();
             var msgFactory = new OpenApiMessagesFactory();
-            var msg = msgFactory.CreateAmendLimitOrderRequest(Convert.ToInt32(accountID), token, 100, 1.10);
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            var msg = msgFactory.CreateAmendLimitOrderRequest(Convert.ToInt32(accountID), token, 100000, 1.10);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
 
         protected void btnSendStopOrderRequest_Click(object sender, EventArgs e)
         {
+            SendAuthorizationRequest();
             var accountID = ddlTradingAccounts.SelectedValue;
             var token = Session["Token"].ToString();
             var msgFactory = new OpenApiMessagesFactory();
             var msg = msgFactory.CreateStopOrderRequest(Convert.ToInt32(accountID), token, "EURUSD", OpenApiLib.ProtoTradeSide.BUY, 1000000, 0.2);
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
 
         protected void btnSendClosePositionRequest_Click(object sender, EventArgs e)
         {
+            SendAuthorizationRequest();
             var accountID = ddlTradingAccounts.SelectedValue;
             var token = Session["Token"].ToString();
             var msgFactory = new OpenApiMessagesFactory();
             var msg = msgFactory.CreateClosePositionRequest(Convert.ToInt32(accountID), token, 100, 100000);
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
 
         protected void btnSubscribeForSpotsRequest_Click(object sender, EventArgs e)
         {
+            SendAuthorizationRequest();
             var accountID = ddlTradingAccounts.SelectedValue;
             var token = Session["Token"].ToString();
             var msgFactory = new OpenApiMessagesFactory();
             var msg = msgFactory.CreateSubscribeForSpotsRequest(Convert.ToInt32(accountID), token, "EURUSD");
-            SslStream apiSocket = Transmit(msg);
-            byte[] _message = Listen(apiSocket);
+            Transmit(msg);
+            byte[] _message = Listen(_apiSocket);
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
+              
     }
 }

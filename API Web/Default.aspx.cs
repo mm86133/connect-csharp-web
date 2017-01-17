@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.DataVisualization.Charting;
@@ -37,7 +38,7 @@ namespace Accounts_API_Web
                         var accounts = TradingAccount.GetTradingAccounts(_apiUrl, tokenString);
                         ddlTradingAccounts.DataSource = accounts;
                         ddlTradingAccounts.DataBind();
-                        Session["Token"] = token.Token;
+                        Session["Token"] = tokenString;
                     }
                 }
                 else
@@ -47,7 +48,7 @@ namespace Accounts_API_Web
                 }
             }
         }
-       
+
         protected void btnTradingAccountDetails_Click(object sender, EventArgs e)
         {
             if (ddlTradingAccounts.SelectedValue != null && Session["Token"] != null)
@@ -171,13 +172,12 @@ namespace Accounts_API_Web
 
         private SslStream Transmit(OpenApiLib.ProtoMessage msg)
         {
+            TcpClient client = new TcpClient(_apiHost, _apiPort);
+            var apiSocket = new SslStream(client.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
+            apiSocket.AuthenticateAsClient(_apiHost);
+
             var msgByteArray = msg.ToByteArray();
             byte[] length = BitConverter.GetBytes(msgByteArray.Length).Reverse().ToArray();
-
-            TcpClient client = new TcpClient(_apiHost, _apiPort);
-            var apiSocket = new SslStream(client.GetStream(), false,
-                new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
-            apiSocket.AuthenticateAsClient(_apiHost);
             apiSocket.Write(length);
             apiSocket.Write(msgByteArray);
             return apiSocket;
@@ -214,7 +214,7 @@ namespace Accounts_API_Web
 
         protected void btnSubscribeForTradingEvents_Click(object sender, EventArgs e)
         {
-            var accountID =  ddlTradingAccounts.SelectedValue;
+            var accountID = ddlTradingAccounts.SelectedValue;
             var token = Session["Token"].ToString();
             var msgFactory = new OpenApiMessagesFactory();
             var msg = msgFactory.CreateSubscribeForTradingEventsRequest(Convert.ToInt32(accountID), token);

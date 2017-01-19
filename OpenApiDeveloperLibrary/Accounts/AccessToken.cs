@@ -71,5 +71,14 @@ namespace Connect_API.Accounts
             var tokenResponse = client.Execute<AccessToken>(request);
             return JsonConvert.DeserializeObject<AccessToken>(tokenResponse.Content);
         }
+
+        public static AccessToken RefreshAccessToken(string connectUrl, string token, string clientID, string clientSecret)
+        {
+            var client = new RestClient(connectUrl);
+            var request = new RestRequest(@"apps/token?grant_type=refresh_token&refresh_token=" + token +
+                "&client_id=" + clientID + "&client_secret=" + clientSecret);
+            var tokenResponse = client.Execute<AccessToken>(request);
+            return JsonConvert.DeserializeObject<AccessToken>(tokenResponse.Content);
+        }
     }
 }

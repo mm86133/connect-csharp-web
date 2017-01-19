@@ -10,6 +10,7 @@
     </asp:DropDownList>
     <asp:Button ID="btnTradingAccountDetails" runat="server" Text="Show Trading Account Details" OnClick="btnTradingAccountDetails_Click" />
     <br />
+    <asp:Button ID="btnRefreshToken" runat="server" Text="Refresh Token" OnClick="btnRefreshToken_Click" />
     <ajaxToolkit:TabContainer ID="tcMainContainer" runat="server" ActiveTabIndex="0" Enabled="False">
         <ajaxToolkit:TabPanel runat="server" HeaderText="Deals" ID="tpDeals">
             <ContentTemplate>

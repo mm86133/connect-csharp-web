@@ -14,11 +14,17 @@ namespace Accounts_API_Web
 {
     public partial class _Default : Page
     {
-        private string _clientId = "141_P2S4PV2w2jv1fsJxHuhAkAhYaLGwBQpLk80DvHSj3bc0xhYPuC";
-        private string _clientSecret = "ET2ee1B4JGme1XH4AQUNOInMvfTU3URF4CKCOHOx3SfcNXoojS";
-        private string _connectUrl = "https://sandbox-connect.spotware.com/";
-        private string _apiUrl = "https://sandbox-api.spotware.com/";
-        private string _apiHost = "sandbox-tradeapi.spotware.com";
+        //private string _clientId = "141_P2S4PV2w2jv1fsJxHuhAkAhYaLGwBQpLk80DvHSj3bc0xhYPuC";
+        //private string _clientSecret = "ET2ee1B4JGme1XH4AQUNOInMvfTU3URF4CKCOHOx3SfcNXoojS";
+        //private string _connectUrl = "https://sandbox-connect.spotware.com/";
+        //private string _apiUrl = "https://sandbox-api.spotware.com/";
+        //private string _apiHost = "sandbox-tradeapi.spotware.com";
+
+        private string _clientId = "147_LWNylHInbAm4aTYhnZZXi0e38orWpfygRsGS7ad8zcVIz1kyLo";
+        private string _clientSecret = "OHlYWAvjCylYEYdCMDmz7gM6f9gPTrb6OiZf6M4RipPqg8GzBF";
+        private string _connectUrl = "https://connect.spotware.com/";
+        private string _apiUrl = "https://api.spotware.com/";
+        private string _apiHost = "tradeapi.spotware.com";
         private int _apiPort = 5032;
         private TcpClient _tcpClient = new TcpClient();
         private SslStream _apiSocket;
@@ -31,7 +37,7 @@ namespace Accounts_API_Web
                     var code = HttpContext.Current.Request.QueryString["code"];
                     var redirectUri = Session["Url"].ToString();
                     var token = AccessToken.GetAccessToken(_connectUrl, code, redirectUri, _clientId, _clientSecret);
-                    var tokenString = token.Token;
+                    var tokenString = token.Token; 
                     if (tokenString != null)
                     {
                         tcMainContainer.Enabled = true;
@@ -40,6 +46,7 @@ namespace Accounts_API_Web
                         ddlTradingAccounts.DataSource = accounts;
                         ddlTradingAccounts.DataBind();
                         Session["Token"] = tokenString;
+                        Session["RefreshToken"] = token.RefreshToken;
                     }
                 }
                 else
@@ -354,6 +361,12 @@ namespace Accounts_API_Web
             var protoMessage = msgFactory.GetMessage(_message);
             lblResponse.Text = OpenApiMessagesPresentation.ToString(protoMessage);
         }
-              
+
+        protected void btnRefreshToken_Click(object sender, EventArgs e)
+        {
+            var token = Session["RefreshToken"].ToString();
+            var newToken = AccessToken.RefreshAccessToken(_connectUrl, token, _clientId, _clientSecret);
+            
+        }
     }
 }

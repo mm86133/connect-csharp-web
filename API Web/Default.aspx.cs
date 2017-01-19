@@ -14,17 +14,17 @@ namespace Accounts_API_Web
 {
     public partial class _Default : Page
     {
-        //private string _clientId = "141_P2S4PV2w2jv1fsJxHuhAkAhYaLGwBQpLk80DvHSj3bc0xhYPuC";
-        //private string _clientSecret = "ET2ee1B4JGme1XH4AQUNOInMvfTU3URF4CKCOHOx3SfcNXoojS";
-        //private string _connectUrl = "https://sandbox-connect.spotware.com/";
-        //private string _apiUrl = "https://sandbox-api.spotware.com/";
-        //private string _apiHost = "sandbox-tradeapi.spotware.com";
+        private string _clientId = "141_P2S4PV2w2jv1fsJxHuhAkAhYaLGwBQpLk80DvHSj3bc0xhYPuC";
+        private string _clientSecret = "ET2ee1B4JGme1XH4AQUNOInMvfTU3URF4CKCOHOx3SfcNXoojS";
+        private string _connectUrl = "https://sandbox-connect.spotware.com/";
+        private string _apiUrl = "https://sandbox-api.spotware.com/";
+        private string _apiHost = "sandbox-tradeapi.spotware.com";
 
-        private string _clientId = "147_LWNylHInbAm4aTYhnZZXi0e38orWpfygRsGS7ad8zcVIz1kyLo";
-        private string _clientSecret = "OHlYWAvjCylYEYdCMDmz7gM6f9gPTrb6OiZf6M4RipPqg8GzBF";
-        private string _connectUrl = "https://connect.spotware.com/";
-        private string _apiUrl = "https://api.spotware.com/";
-        private string _apiHost = "tradeapi.spotware.com";
+        //private string _clientId = "";
+        //private string _clientSecret = "";
+        //private string _connectUrl = "https://connect.spotware.com/";
+        //private string _apiUrl = "https://api.spotware.com/";
+        //private string _apiHost = "tradeapi.spotware.com";
         private int _apiPort = 5032;
         private TcpClient _tcpClient = new TcpClient();
         private SslStream _apiSocket;
